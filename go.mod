@@ -1,4 +1,4 @@
-module caddy_vault_storage
+module github.com/gerolf-vent/caddy-vault-storage
 
 go 1.21.5
 
