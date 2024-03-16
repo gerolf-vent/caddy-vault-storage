@@ -201,12 +201,6 @@ func (s *VaultStorage) ReconnectOnError(ctx context.Context, err error, clientAd
 
 	reconnect := false
 
-	// If there are less than two addresses to choose from, a reconnect wouldn't do anything
-	if len(s.Addresses) < 2 {
-		s.logger.Debug("Skipping reconnection check, because there are not enough addresses configured")
-		return reconnect, nil
-	}
-
 	// Reconnect on connectivity errors
 	var urlError *url.Error
 	if errors.As(err, &urlError) {
@@ -222,6 +216,12 @@ func (s *VaultStorage) ReconnectOnError(ctx context.Context, err error, clientAd
 	}
 
 	if (reconnect) {
+		// If there are less than two addresses to choose from, an actual reconnect wouldn't do anything
+		if len(s.Addresses) < 2 {
+			s.logger.Debug("Skipping actual reconnection, because there are not enough addresses configured")
+			return true, nil  // Still perform a connection retry
+		}
+
 		s.connectionLock.Lock()
 		defer s.connectionLock.Unlock()
 
