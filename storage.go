@@ -19,9 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-/**
- * Central data structure for vault storage module
- */
+// A highly available storage plugin that integrates with HashiCorp Vault 
 type VaultStorage struct {
 	client *vault.Client
 	clientLastFailedAddress string  // Address that caused a reconnect
