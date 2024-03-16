@@ -12,7 +12,7 @@ This module is based on the [Vault api client](https://pkg.go.dev/github.com/has
 
 | Name | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| addresses | string | *None* | One or more addresses of Vault servers (on the **same** cluster) separated by `,` |
+| addresses | []string | *None* | One or more addresses of Vault servers (on the **same** cluster) |
 | secrets_mount_path | string | `"kv"` | Path of the KVv2 mount to use |
 | secrets_path_prefix | string | `"caddy"` | Path in the KVv2 mount to use |
 | max_retries | int | `3` | Limit of connection retries after which to fail a request |
