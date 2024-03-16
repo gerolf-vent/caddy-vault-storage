@@ -271,7 +271,7 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 
 	var lockInfo LockInfo
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			s.logger.Debug("Locking failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -381,7 +381,7 @@ func (s *VaultStorage) LockEnsureMetadata(ctx context.Context, path string) erro
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return ErrRetriesExceeded
 		}
 
@@ -427,7 +427,7 @@ func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, err
 	var metadata *vault.KVMetadata
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return lockInfo, ErrRetriesExceeded
 		}
 
@@ -508,7 +508,7 @@ func (s *VaultStorage) Unlock(ctx context.Context, path string) error {
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			s.logger.Debug("Unlocking failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -569,7 +569,7 @@ func (s *VaultStorage) Store(ctx context.Context, path string, value []byte) err
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			s.logger.Debug("Storing failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -617,7 +617,7 @@ func (s *VaultStorage) StoreEnsureMetadata(ctx context.Context, path string) err
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return ErrRetriesExceeded
 		}
 
@@ -662,7 +662,7 @@ func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
 	var secret *vault.KVSecret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return nil, ErrRetriesExceeded
 		}
 
@@ -776,7 +776,7 @@ func (s *VaultStorage) Delete(ctx context.Context, path string) error {
 
 	for _, filePath := range filePathsToDelete {
 		for i := s.MaxRetries; true; i-- {
-			if (i == 0) {
+			if (i <= 0) {
 				s.logger.Debug("Deleting failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 				return ErrRetriesExceeded
 			}
@@ -832,7 +832,7 @@ func (s *VaultStorage) Stat(ctx context.Context, path string) (certmagic.KeyInfo
 	var metadata *vault.KVMetadata
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			s.logger.Debug("Stating failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return keyInfo, ErrRetriesExceeded
 		}
@@ -917,7 +917,7 @@ func (s *VaultStorage) StatCheckDirectory(ctx context.Context, path string) (boo
 	var response *vault.Secret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return false, ErrRetriesExceeded
 		}
 
@@ -1008,7 +1008,7 @@ func (s *VaultStorage) ListAggregate(ctx context.Context, path string, recursive
 	var secret *vault.Secret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i == 0) {
+		if (i <= 0) {
 			return ErrRetriesExceeded
 		}
 
