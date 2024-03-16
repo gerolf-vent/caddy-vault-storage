@@ -19,21 +19,38 @@ import (
 	"github.com/google/uuid"
 )
 
-// A highly available storage plugin that integrates with HashiCorp Vault 
+// A highly available storage plugin that integrates with HashiCorp Vault. 
 type VaultStorage struct {
 	client *vault.Client
-	clientLastFailedAddress string  // Address that caused a reconnect
-	connectionLock sync.RWMutex  // Lock for connection management
-	lockVersions sync.Map  // Holds the local lock version information
-
 	logger *zap.Logger
 
+	// Address that caused a reconnect
+	clientLastFailedAddress string
+
+	// Lock for connection management
+	connectionLock sync.RWMutex
+
+	// Holds the local lock version information
+	lockVersions sync.Map
+
+	// One or more address(es) to Vault servers on the same cluster. For
+	// authentication use the environment variable "VAULT_TOKEN".
 	Addresses []string `json:"addresses"`
+
+	// Path of the KVv2 mount to use.
 	SecretsMountPath string `json:"secrets_mount_path,omitempty"`
+
+	// Path in the KVv2 mount to use.
 	SecretsPathPrefix string `json:"secrets_path_prefix,omitempty"`
+
+	// Limit of connection retries after which to fail a request.
 	MaxRetries int `json:"max_retries,omitempty"`
-	LockTimeout int `json:"lock_timeout,omitempty"`  // in seconds
-	LockCheckInterval int `json:"lock_check_interval,omitempty"`  // in seconds
+
+	// Timeout for locks (in seconds).
+	LockTimeout int `json:"lock_timeout,omitempty"`
+
+	// Interval for checking lock status (in seconds).
+	LockCheckInterval int `json:"lock_check_interval,omitempty"`
 }
 
 /**
