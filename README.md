@@ -16,8 +16,8 @@ This module is based on the [Vault api client](https://pkg.go.dev/github.com/has
 | secrets_mount_path | string | `"kv"` | Path of the KVv2 mount to use |
 | secrets_path_prefix | string | `"caddy"` | Path in the KVv2 mount to use |
 | max_retries | int | `3` | Limit of connection retries after which to fail a request |
-| lock_timeout | int | `60` | Timeout for locks |
-| lock_check_interval | int | `5` | Interval for checking lock status |
+| lock_timeout | int | `60` | Timeout for locks (in seconds) |
+| lock_check_interval | int | `5` | Interval for checking lock status (in seconds) |
 
 ### Example
 Run `VAULT_TOKEN="..." caddy run --config server.json` with the following configuration as `server.json`:
