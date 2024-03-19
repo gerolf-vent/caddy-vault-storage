@@ -1,13 +1,16 @@
 package caddy_vault_storage
 
 import (
+	"bufio"
 	"container/list"
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io/fs"
 	"math/rand"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +18,7 @@ import (
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/caddyserver/certmagic"
+	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
 	"github.com/google/uuid"
 )
@@ -33,9 +37,16 @@ type VaultStorage struct {
 	// Holds the local lock version information
 	lockVersions sync.Map
 
-	// One or more address(es) to Vault servers on the same cluster. For
-	// authentication use the environment variable "VAULT_TOKEN".
+	// Fs watcher for token file
+	tokenFileWatcher *fsnotify.Watcher
+
+	// One or more address(es) to Vault servers on the same cluster.
 	Addresses []string `json:"addresses"`
+
+	// Local path to read the access token from. Updates on that file will be
+	// detected and automatically read. You can also use the environment
+	// variable "VAULT_TOKEN" instead, but it will only be read once on startup.
+	TokenPath string `json:"token_path,omitempty"`
 
 	// Path of the KVv2 mount to use.
 	SecretsMountPath string `json:"secrets_mount_path,omitempty"`
@@ -78,6 +89,7 @@ var ErrInvalidResponse = errors.New("Couldn't process an invalid response")
 func New() *VaultStorage {
 	s := VaultStorage{
 		Addresses: []string{},
+		TokenPath: "",
 		SecretsMountPath: "kv",
 		SecretsPathPrefix: "caddy",
 		MaxRetries: 3,
@@ -93,6 +105,44 @@ func New() *VaultStorage {
  */
 func (s *VaultStorage) PrefixPath(path string) string {
 	return strings.Trim(strings.Trim(s.SecretsPathPrefix, "/") + "/" + path, "/")
+}
+
+/**
+ * Loads the access token from the configured file path
+ */
+func (s *VaultStorage) LoadTokenFromFile() error {
+	if s.TokenPath == "" {
+		return nil
+	}
+
+	isReloading := s.client.Token() != ""
+
+	tokenFile, err := os.Open(s.TokenPath)
+	if err != nil {
+		if isReloading {
+			s.logger.Error("Failed to load loken from file", zap.String("path", s.TokenPath), zap.Error(err))
+		} else {
+			s.logger.Error("Failed to reload loken from file", zap.String("path", s.TokenPath), zap.Error(err))
+		}
+		return err
+	}
+	defer tokenFile.Close()
+
+	tokenScanner := bufio.NewScanner(tokenFile)
+	tokenScanner.Scan()
+	token := tokenScanner.Text()
+
+	s.connectionLock.Lock()
+	s.client.SetToken(token)
+	s.connectionLock.Unlock()
+
+	if isReloading {
+		s.logger.Debug("Reloaded token from file", zap.String("path", s.TokenPath))
+	} else {
+		s.logger.Debug("Loaded token from file", zap.String("path", s.TokenPath))
+	}
+
+	return nil
 }
 
 /**
