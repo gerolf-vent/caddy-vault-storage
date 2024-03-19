@@ -89,7 +89,7 @@ func (s *VaultStorage) Validate() error {
 	}
 
 	ctx := context.Background()
-	err := s.StoreLoadDeleteCheck(ctx)
+	err := s.CheckCapabilities(ctx)
 	if err != nil {
 		return err
 	}

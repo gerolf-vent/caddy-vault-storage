@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"math/rand"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +20,6 @@ import (
 	"github.com/caddyserver/certmagic"
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
-	"github.com/google/uuid"
 )
 
 // A highly available storage plugin that integrates with HashiCorp Vault. 
@@ -219,42 +218,62 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
 }
 
 /**
- * Tries to create and retreive a value on the connection to test permissions.
+ * Checks whether the provided token has enough access rights to perform all
+ * operations, that this module requires.
  */
-func (s *VaultStorage) StoreLoadDeleteCheck(ctx context.Context) error {
-	pathRaw, err := uuid.NewRandom()
+func (s *VaultStorage) CheckCapabilities(ctx context.Context) error {
+	var err error
+	metadataCheckPassed, err := s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/metadata/" + s.SecretsPathPrefix + "/*", []string{"create", "read", "list", "update", "delete"})
+	if err != nil {
+		var responseError *vault.ResponseError
+		if errors.As(err, &responseError) && responseError.StatusCode == 403 {
+			return fmt.Errorf("Provided token is invalid")
+		} else {
+			return err
+		}
+	}
+
+	var dataCheckPassed bool
+	dataCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/data/" + s.SecretsPathPrefix + "/*", []string{"create", "read", "update"})
 	if err != nil {
 		return err
 	}
 
-	path := "connection-check/" + pathRaw.String()
-
-	value := make([]byte, 32)
-	_, err = rand.Read(value)
+	var deleteCheckPassed bool
+	deleteCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/delete/" + s.SecretsPathPrefix + "/*", []string{"create", "update"})
 	if err != nil {
 		return err
 	}
 
-	err = s.Store(ctx, path, value)
+	if metadataCheckPassed && dataCheckPassed && deleteCheckPassed {
+		s.logger.Debug("Capabilities check passed", zap.String("address", s.client.Address()))
+		return nil
+	} else {
+		return fmt.Errorf("Capabilities check failed")
+	}
+}
+
+/**
+ * Checks if a set of required capabilities are granted on a given api path
+ */
+func (s *VaultStorage) CheckCapabilitiesOnPath(ctx context.Context, path string, requiredCapabilities []string) (bool, error) {
+	grantedCapabilities, err := s.client.Sys().CapabilitiesSelfWithContext(ctx, path)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	var loadedValue []byte
-	loadedValue, err = s.Load(ctx, path)
-	if err != nil {
-		return err
-	} else if string(loadedValue) != string(value) {
-		return errors.New("Value mismatch in read-write-delete check")
+	var missingCapabilities []string
+	for _, capability := range requiredCapabilities {
+		if !slices.Contains(grantedCapabilities, capability) {
+			missingCapabilities = append(missingCapabilities, capability)
+		}
 	}
 
-	err = s.Delete(ctx, path)
-	if err != nil {
-		return err
+	if len(missingCapabilities) > 0 {
+		s.logger.Error("Some capabilities are missing", zap.String("address", s.client.Address()), zap.String("path", path), zap.Any("missingCapabilities", missingCapabilities))
 	}
 
-	s.logger.Debug("Passed store-load-delete check", zap.String("address", s.client.Address()))
-	return nil
+	return len(missingCapabilities) == 0, nil
 }
 
 /**
