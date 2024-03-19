@@ -36,3 +36,8 @@ func (s *VaultStorage) Provision(ctx caddy.Context) error {
 func (s *VaultStorage) CertMagicStorage() (certmagic.Storage, error) {
 	return s, nil
 }
+// Interface guards
+var (
+	_ caddy.Provisioner      = (*VaultStorage)(nil)
+	_ caddy.StorageConverter = (*VaultStorage)(nil)
+)
