@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// A highly available storage plugin that integrates with HashiCorp Vault. 
+// A highly available storage module that integrates with HashiCorp Vault. 
 type VaultStorage struct {
 	client *vault.Client
 	logger *zap.Logger
@@ -39,27 +39,28 @@ type VaultStorage struct {
 	// Fs watcher for token file
 	tokenFileWatcher *fsnotify.Watcher
 
-	// One or more address(es) to Vault servers on the same cluster.
+	// One or more address(es) to Vault servers on the same cluster. (At least one address is required.)
 	Addresses []string `json:"addresses"`
 
 	// Local path to read the access token from. Updates on that file will be
-	// detected and automatically read. You can also use the environment
-	// variable "VAULT_TOKEN" instead, but it will only be read once on startup.
+	// detected and automatically read. (As fallback the the environment
+	// variable "VAULT_TOKEN" will be used, but it will only be read once on
+	// startup.)
 	TokenPath string `json:"token_path,omitempty"`
 
-	// Path of the KVv2 mount to use.
+	// Path of the KVv2 mount to use. (Default is "kv".)
 	SecretsMountPath string `json:"secrets_mount_path,omitempty"`
 
-	// Path in the KVv2 mount to use.
+	// Path in the KVv2 mount to use. (Default is "caddy".)
 	SecretsPathPrefix string `json:"secrets_path_prefix,omitempty"`
 
-	// Limit of connection retries after which to fail a request.
+	// Limit of connection retries after which to fail a request. (Default is 3.)
 	MaxRetries int `json:"max_retries,omitempty"`
 
-	// Timeout for locks (in seconds).
+	// Timeout for locks (in seconds). (Default is 60.)
 	LockTimeout int `json:"lock_timeout,omitempty"`
 
-	// Interval for checking lock status (in seconds).
+	// Interval for checking lock status (in seconds). (Default is 5.)
 	LockCheckInterval int `json:"lock_check_interval,omitempty"`
 }
 
