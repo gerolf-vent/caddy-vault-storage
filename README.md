@@ -1,6 +1,8 @@
 # A storage module for [Caddy](https://caddyserver.com/) that uses HashiCorp [Vault](https://vaultproject.io/) as backend
 This module supports to configure multiple Vault servers to ensure high availability. If a request on one configured address failes, another will be tried. This is useful, if you don't have a load-balancer for your Vault cluster or you are using Caddy as a load balancer for it.
 
+If you run Caddy inside a Nomad cluster, you can use Nomad to [issue Vault tokens for it](nomad-integration.md).
+
 ## Notice
 A running Vault instance/cluster with an enabled KVv2 mount is required for using this module. At startup a check for required capabilities on the configured secrets path will be performed and error messages will be shown with the missing capabilties, if any. The following capabilities must be granted:
 ```hcl
