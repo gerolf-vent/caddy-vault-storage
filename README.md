@@ -28,7 +28,7 @@ This module is based on the [Vault api client](https://pkg.go.dev/github.com/has
 
 | Name | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| addresses | []string | *None* | One or more addresses of Vault servers (on the **same** cluster) |
+| addresses | []string (or comma-separated string in Caddyfile) | *None* | One or more addresses of Vault servers (on the **same** cluster) |
 | token_path | string | `$VAULT_TOKEN` environment variable | Local path to read the access token from. Updates on that file will be detected and automatically read. |
 | secrets_mount_path | string | `"kv"` | Path of the KVv2 mount to use |
 | secrets_path_prefix | string | `"caddy"` | Path in the KVv2 mount to use |
@@ -73,6 +73,21 @@ Run `caddy run --config server.json` with the following configuration as `server
 		}
 	}
 }
+```
+
+Or `caddy run --config Caddyfile --adapter caddyfile` with the following configuration as `Caddyfile`:
+```caddyfile
+{
+  storage vault {
+    addresses "https://server1,https://server2,https://server3"
+    token_path "./vault_token"
+  }
+  debug
+}
+
+localhost:8000
+
+respond "Hello, world!"
 ```
 
 ## Testing
