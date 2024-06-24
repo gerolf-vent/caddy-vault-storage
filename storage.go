@@ -263,6 +263,10 @@ func (s *VaultStorage) CheckCapabilitiesOnPath(ctx context.Context, path string,
 		return false, err
 	}
 
+	if slices.Contains(grantedCapabilities, "root") {
+		return true, nil
+	}
+
 	var missingCapabilities []string
 	for _, capability := range requiredCapabilities {
 		if !slices.Contains(grantedCapabilities, capability) {
