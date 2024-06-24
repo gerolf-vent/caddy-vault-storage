@@ -69,13 +69,13 @@ func TestConnect(t *testing.T) {
 }
 
 /**
- * Check the store-load-delete check
+ * Check the capabilities check
  */
-func TestStoreLoadDeleteCheck(t *testing.T) {
+func TestCheckCapabilities(t *testing.T) {
 	ctx := context.Background()
 	s := Setup(t, ctx)
 
-	assert.NilError(t, s.StoreLoadDeleteCheck(ctx))
+	assert.NilError(t, s.CheckCapabilities(ctx))
 }
 
 /**
