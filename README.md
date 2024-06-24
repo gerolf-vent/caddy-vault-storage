@@ -91,4 +91,4 @@ respond "Hello, world!"
 ```
 
 ## Testing
-A running vault instance/cluster with at least two distinct addresses is required to run all of the tests. The tests can be performed by `VAULT_STORAGE_ADDR="https://server1,https://server2" VAULT_TOKEN="..." go test`. Extensive logging is enabled to debug any errors.
+A running vault instance/cluster with at least two distinct addresses is required to run all of the tests. The tests can be performed by `VAULT_STORAGE_ADDRS="https://server1,https://server2" VAULT_TOKEN="..." go test`. Extensive logging is enabled to debug any errors.
