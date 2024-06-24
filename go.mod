@@ -6,7 +6,6 @@ require (
 	github.com/caddyserver/caddy/v2 v2.7.6
 	github.com/caddyserver/certmagic v0.20.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/google/uuid v1.3.1
 	github.com/hashicorp/vault/api v1.12.1
 	go.uber.org/zap v1.27.0
 	gotest.tools v2.2.0+incompatible
@@ -21,6 +20,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
