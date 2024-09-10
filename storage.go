@@ -62,6 +62,9 @@ type VaultStorage struct {
 
 	// Interval for checking lock status (in seconds). (Default is 5.)
 	LockCheckInterval int `json:"lock_check_interval,omitempty"`
+
+	// Enables Vault token renewal process
+	RenewToken bool `json:"renew_token,omitempty"`
 }
 
 /**
@@ -82,19 +85,21 @@ var ErrNoServersConfigured = errors.New("No servers configured")
 var ErrClientNotInitialized = errors.New("Client is not initialized")
 var ErrInvalidValue = errors.New("Data in this key has an invalid value")
 var ErrInvalidResponse = errors.New("Couldn't process an invalid response")
+var ErrVaultTokenRenewal = errors.New("Failed to renew Vault token")
 
 /**
  * Creates a new vault storage module instance with default values
  */
 func New() *VaultStorage {
 	s := VaultStorage{
-		Addresses: []string{},
-		TokenPath: "",
-		SecretsMountPath: "kv",
+		Addresses:         []string{},
+		TokenPath:         "",
+		SecretsMountPath:  "secret",
 		SecretsPathPrefix: "caddy",
-		MaxRetries: 3,
-		LockTimeout: 60,
+		MaxRetries:        3,
+		LockTimeout:       60,
 		LockCheckInterval: 5,
+		RenewToken:        false,
 	}
 
 	return &s
@@ -246,7 +251,13 @@ func (s *VaultStorage) CheckCapabilities(ctx context.Context) error {
 		return err
 	}
 
-	if metadataCheckPassed && dataCheckPassed && deleteCheckPassed {
+	var renewTokenCheckPassed bool
+	renewTokenCheckPassed = true
+	if s.RenewToken {
+		renewTokenCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, "auth/token/renew-self", []string{"update"})
+	}
+
+	if metadataCheckPassed && dataCheckPassed && deleteCheckPassed && renewTokenCheckPassed {
 		s.logger.Debug("Capabilities check passed", zap.String("address", s.client.Address()))
 		return nil
 	} else {
@@ -1162,4 +1173,18 @@ func (s *VaultStorage) ListAggregate(ctx context.Context, path string, recursive
 	}
 
 	return nil
+}
+
+func (s *VaultStorage) StartTokenRenewal() (time.Duration, error) {
+	// Attempt to renew the token
+	secret, err := s.client.Auth().Token().RenewSelf(0)
+	if err != nil {
+		s.logger.Error("Failed to renew token", zap.Error(err))
+		return 0, err // Return error and no lease duration
+	}
+
+	leaseDuration := time.Duration(secret.Auth.LeaseDuration) * time.Second
+	s.logger.Info("Token renewed successfully", zap.Int("lease_duration", secret.Auth.LeaseDuration))
+
+	return leaseDuration, nil // Return the lease duration for dynamic renewal
 }

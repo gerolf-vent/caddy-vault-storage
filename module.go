@@ -35,6 +35,25 @@ func (s *VaultStorage) Provision(ctx caddy.Context) error {
 		return err
 	}
 
+	if s.RenewToken {
+		s.logger.Debug("Starting token renewal routine")
+
+		go func() {
+			for {
+				// Call StartTokenRenewal and get the lease duration
+				leaseDuration, err := s.StartTokenRenewal()
+				if err != nil {
+					// Retry after a short delay in case of failure
+					time.Sleep(1 * time.Minute)
+					continue
+				}
+
+				// Sleep for half the lease duration before the next renewal
+				time.Sleep(leaseDuration / 2)
+			}
+		}()
+	}
+
 	if s.TokenPath != "" {
 		err := s.LoadTokenFromFile()
 		if err != nil {
