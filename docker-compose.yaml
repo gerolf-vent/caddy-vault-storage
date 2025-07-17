@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address", "http://127.0.0.1:8200"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    networks:
+      default:
+        aliases:
+          - vault
+          - vault1
+          - vault2
+
+  vault-setup:
+    image: hashicorp/vault:latest
+    container_name: vault-setup
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "Setting up Vault..."
+        vault secrets enable -path=kv -version=2 kv
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+
+  go-test:
+    image: cgr.dev/chainguard/go:latest
+    container_name: go-test
+    entrypoint:
+    - sh
+    - -c
+    - |
+      echo "Running Go tests..."
+      go test
+    working_dir: /src
+    volumes:
+      - .:/src
+    depends_on:
+      vault-setup:
+        condition: service_completed_successfully
+    environment:
+      VAULT_STORAGE_ADDRS: http://vault1:8200,http://vault2:8200
+      VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
