@@ -4,18 +4,18 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"io/fs"
 	"net/url"
-	"strings"
+	"os"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
-	"os"
-	"io/fs"
 
+	"go.uber.org/zap"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	"go.uber.org/zap"
 )
 
 func Setup(t *testing.T, ctx context.Context) *VaultStorage {
@@ -140,7 +140,6 @@ func TestStoreAndLoad(t *testing.T) {
 	assert.Equal(t, string(loadedValue), string(value))
 }
 
-
 /**
  * Creates a value, checks it's (and it's parents path) existence, then deletes
  * it and checking that again
@@ -264,7 +263,7 @@ func TestLockingBasic(t *testing.T) {
 
 	assert.NilError(t, s.Unlock(ctx, "1de198d4d777f04a"))
 
-	lockVersion, lockExists = s.lockVersions.Load("1de198d4d777f04a")
+	_, lockExists = s.lockVersions.Load("1de198d4d777f04a")
 	assert.Equal(t, lockExists, false)
 
 	// Check a second time
@@ -281,7 +280,7 @@ func TestLockingBasic(t *testing.T) {
 
 	assert.NilError(t, s.Unlock(ctx, "1de198d4d777f04a"))
 
-	lockVersion, lockExists = s.lockVersions.Load("1de198d4d777f04a")
+	_, lockExists = s.lockVersions.Load("1de198d4d777f04a")
 	assert.Equal(t, lockExists, false)
 }
 
@@ -296,15 +295,15 @@ func TestLockingConcurrentLocally(t *testing.T) {
 	s.LockCheckInterval = 2
 
 	var waitGroup sync.WaitGroup
-    waitGroup.Add(2)
+	waitGroup.Add(2)
 
-    defer waitGroup.Wait()
+	defer waitGroup.Wait()
 
-    // Contender one holds the lock for 10 seconds
-    go func() {
-    	defer waitGroup.Done()
+	// Contender one holds the lock for 10 seconds
+	go func() {
+		defer waitGroup.Done()
 
-    	startTime := time.Now()
+		startTime := time.Now()
 		assert.NilError(t, s.Lock(ctx, "fc295a2774eddc97"))
 		endTime := time.Now()
 
@@ -318,17 +317,17 @@ func TestLockingConcurrentLocally(t *testing.T) {
 		time.Sleep(6 * time.Second)
 
 		assert.NilError(t, s.Unlock(ctx, "fc295a2774eddc97"))
-    }()
+	}()
 
-    // Contender two waits 3 seconds, before trying to get the lock that is
-    // holded by contender one
-    go func() {
-    	defer waitGroup.Done()
+	// Contender two waits 3 seconds, before trying to get the lock that is
+	// holded by contender one
+	go func() {
+		defer waitGroup.Done()
 
-    	s.logger.Debug("Contender 2 is waiting...")
-    	time.Sleep(2 * time.Second)
+		s.logger.Debug("Contender 2 is waiting...")
+		time.Sleep(2 * time.Second)
 
-    	startTime := time.Now()
+		startTime := time.Now()
 		assert.NilError(t, s.Lock(ctx, "fc295a2774eddc97"))
 		endTime := time.Now()
 
@@ -340,7 +339,7 @@ func TestLockingConcurrentLocally(t *testing.T) {
 		assert.Equal(t, lockVersion, 2)
 
 		assert.NilError(t, s.Unlock(ctx, "fc295a2774eddc97"))
-    }()
+	}()
 }
 
 /**
@@ -362,15 +361,15 @@ func TestLockingConcurrentRemotely(t *testing.T) {
 	s3.LockCheckInterval = 2
 
 	var waitGroup sync.WaitGroup
-    waitGroup.Add(3)
+	waitGroup.Add(3)
 
-    defer waitGroup.Wait()
+	defer waitGroup.Wait()
 
-    // Contender one holds the lock for 10 seconds
-    go func() {
-    	defer waitGroup.Done()
+	// Contender one holds the lock for 10 seconds
+	go func() {
+		defer waitGroup.Done()
 
-    	startTime := time.Now()
+		startTime := time.Now()
 		assert.NilError(t, s1.Lock(ctx, "fc295a2774eddc97"))
 		endTime := time.Now()
 
@@ -384,17 +383,17 @@ func TestLockingConcurrentRemotely(t *testing.T) {
 		time.Sleep(6 * time.Second)
 
 		assert.NilError(t, s1.Unlock(ctx, "fc295a2774eddc97"))
-    }()
+	}()
 
-    // Contender two waits 3 seconds, before trying to get the lock that is
-    // holded by contender one
-    go func() {
-    	defer waitGroup.Done()
+	// Contender two waits 3 seconds, before trying to get the lock that is
+	// holded by contender one
+	go func() {
+		defer waitGroup.Done()
 
-    	s2.logger.Debug("Contender 2 is waiting...")
-    	time.Sleep(2 * time.Second)
+		s2.logger.Debug("Contender 2 is waiting...")
+		time.Sleep(2 * time.Second)
 
-    	startTime := time.Now()
+		startTime := time.Now()
 		assert.NilError(t, s2.Lock(ctx, "fc295a2774eddc97"))
 		endTime := time.Now()
 
@@ -408,16 +407,16 @@ func TestLockingConcurrentRemotely(t *testing.T) {
 		s2.logger.Debug("Contender 2 got lock", zap.Any("version", lockVersion))
 
 		assert.NilError(t, s2.Unlock(ctx, "fc295a2774eddc97"))
-    }()
+	}()
 
-    // Contender three does the same as contender two
-    go func() {
-    	defer waitGroup.Done()
+	// Contender three does the same as contender two
+	go func() {
+		defer waitGroup.Done()
 
-    	s3.logger.Debug("Contender 3 is waiting...")
-    	time.Sleep(2 * time.Second)
+		s3.logger.Debug("Contender 3 is waiting...")
+		time.Sleep(2 * time.Second)
 
-    	startTime := time.Now()
+		startTime := time.Now()
 		assert.NilError(t, s3.Lock(ctx, "fc295a2774eddc97"))
 		endTime := time.Now()
 
@@ -431,5 +430,5 @@ func TestLockingConcurrentRemotely(t *testing.T) {
 		s3.logger.Debug("Contender 3 got lock", zap.Any("version", lockVersion))
 
 		assert.NilError(t, s3.Unlock(ctx, "fc295a2774eddc97"))
-    }()
+	}()
 }

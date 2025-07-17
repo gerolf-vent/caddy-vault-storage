@@ -2,7 +2,7 @@ package caddy_vault_storage
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"strconv"
 	"strings"
@@ -83,12 +83,12 @@ func (s *VaultStorage) Provision(ctx caddy.Context) error {
 
 func (s *VaultStorage) Validate() error {
 	if len(s.Addresses) == 0 {
-		return fmt.Errorf("At least one Vault server address is required")
+		return errors.New("at least one Vault server address is required")
 	}
 
 	_, tokenEnvExists := os.LookupEnv("VAULT_TOKEN")
 	if !tokenEnvExists && s.TokenPath == "" {
-		return fmt.Errorf("A token path or environment variable is required")
+		return errors.New("a token path or environment variable is required")
 	}
 
 	ctx := context.Background()
@@ -117,16 +117,15 @@ func (s *VaultStorage) Cleanup() error {
 
 // Parses configuration from Caddyfile
 //
-// storage vault {
-//     addresses           "https://vault-host-1,https://vault-host-2,https://vault-host-3"
-//     token_path          "secrets/vault_token"
-//     secrets_mount_path  "kv"
-//     secrets_path_prefix "caddy"
-//     max_retries         3
-//     lock_timeout        60
-//     lock_check_interval 5
-// }
-//
+//	storage vault {
+//	    addresses           "https://vault-host-1,https://vault-host-2,https://vault-host-3"
+//	    token_path          "secrets/vault_token"
+//	    secrets_mount_path  "kv"
+//	    secrets_path_prefix "caddy"
+//	    max_retries         3
+//	    lock_timeout        60
+//	    lock_check_interval 5
+//	}
 func (s *VaultStorage) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		key := d.Val()

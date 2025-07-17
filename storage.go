@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/url"
 	"os"
@@ -16,13 +15,13 @@ import (
 	"sync"
 	"time"
 
-	vault "github.com/hashicorp/vault/api"
 	"github.com/caddyserver/certmagic"
 	"github.com/fsnotify/fsnotify"
+	vault "github.com/hashicorp/vault/api"
 	"go.uber.org/zap"
 )
 
-// A highly available storage module that integrates with HashiCorp Vault. 
+// A highly available storage module that integrates with HashiCorp Vault.
 type VaultStorage struct {
 	client *vault.Client
 	logger *zap.Logger
@@ -68,32 +67,32 @@ type VaultStorage struct {
  * Data structure for lock information
  */
 type LockInfo struct {
-	Created time.Time
-	Version int  // Version number of the current holded lock (required for check-and-set)
+	Created  time.Time
+	Version  int // Version number of the current holded lock (required for check-and-set)
 	IsLocked bool
 }
 
 /**
  * Errors
  */
-var ErrRetriesExceeded = errors.New("Connection retry count exceeded")
-var ErrAllServersUnavailable = errors.New("All servers are unavailable")
-var ErrNoServersConfigured = errors.New("No servers configured")
-var ErrClientNotInitialized = errors.New("Client is not initialized")
-var ErrInvalidValue = errors.New("Data in this key has an invalid value")
-var ErrInvalidResponse = errors.New("Couldn't process an invalid response")
+var ErrRetriesExceeded = errors.New("connection retry count exceeded")
+var ErrAllServersUnavailable = errors.New("all servers are unavailable")
+var ErrNoServersConfigured = errors.New("no servers configured")
+var ErrClientNotInitialized = errors.New("client is not initialized")
+var ErrInvalidValue = errors.New("data in this key has an invalid value")
+var ErrInvalidResponse = errors.New("couldn't process an invalid response")
 
 /**
  * Creates a new vault storage module instance with default values
  */
 func New() *VaultStorage {
 	s := VaultStorage{
-		Addresses: []string{},
-		TokenPath: "",
-		SecretsMountPath: "kv",
+		Addresses:         []string{},
+		TokenPath:         "",
+		SecretsMountPath:  "kv",
 		SecretsPathPrefix: "caddy",
-		MaxRetries: 3,
-		LockTimeout: 60,
+		MaxRetries:        3,
+		LockTimeout:       60,
 		LockCheckInterval: 5,
 	}
 
@@ -104,7 +103,7 @@ func New() *VaultStorage {
  * Adds the secrets path prefix (from configuration) to the path provided.
  */
 func (s *VaultStorage) PrefixPath(path string) string {
-	return strings.Trim(strings.Trim(s.SecretsPathPrefix, "/") + "/" + path, "/")
+	return strings.Trim(strings.Trim(s.SecretsPathPrefix, "/")+"/"+path, "/")
 }
 
 /**
@@ -147,10 +146,10 @@ func (s *VaultStorage) LoadTokenFromFile() error {
 
 /**
  * Establishes a connection to a healthy Vault instance.
- * 
+ *
  * `s.client` will always be initialized and reused, if already existing, so there
  * can't be a nil dereference error, when at least calling this once.
- * 
+ *
  * If there is more than one address configured, every address will be checked
  * to be a healthy Vault instance and the first healthy instance will be used.
  */
@@ -176,7 +175,7 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
 			// There is no client configured, so create it
 			clientConfig := vault.DefaultConfig()
 			clientConfig.Address = address
-			clientConfig.MaxRetries = 1  // We handle retries our own way
+			clientConfig.MaxRetries = 1 // We handle retries our own way
 			client, err := vault.NewClient(clientConfig)
 			if err != nil {
 				s.logger.Error("Failed to initialize Vault client", zap.String("address", address), zap.Error(err))
@@ -185,7 +184,7 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
 			s.client = client
 		} else {
 			// Reuse the existing client
-			err := s.client.SetAddress(address);
+			err := s.client.SetAddress(address)
 			if err != nil {
 				s.logger.Error("Failed to initialize Vault client", zap.String("address", address), zap.Error(err))
 				continue
@@ -209,7 +208,7 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
 		}
 
 		s.logger.Info("Connected", zap.String("address", address))
-		s.clientLastFailedAddress = ""  // Reset the address of failed instance, because we have a new working one now
+		s.clientLastFailedAddress = "" // Reset the address of failed instance, because we have a new working one now
 
 		return nil
 	}
@@ -224,24 +223,24 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
  */
 func (s *VaultStorage) CheckCapabilities(ctx context.Context) error {
 	var err error
-	metadataCheckPassed, err := s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/metadata/" + s.SecretsPathPrefix + "/*", []string{"create", "read", "list", "update", "delete"})
+	metadataCheckPassed, err := s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath+"/metadata/"+s.SecretsPathPrefix+"/*", []string{"create", "read", "list", "update", "delete"})
 	if err != nil {
 		var responseError *vault.ResponseError
 		if errors.As(err, &responseError) && responseError.StatusCode == 403 {
-			return fmt.Errorf("Provided token is invalid")
+			return errors.New("provided token is invalid")
 		} else {
 			return err
 		}
 	}
 
 	var dataCheckPassed bool
-	dataCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/data/" + s.SecretsPathPrefix + "/*", []string{"create", "read", "update"})
+	dataCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath+"/data/"+s.SecretsPathPrefix+"/*", []string{"create", "read", "update"})
 	if err != nil {
 		return err
 	}
 
 	var deleteCheckPassed bool
-	deleteCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath + "/delete/" + s.SecretsPathPrefix + "/*", []string{"create", "update"})
+	deleteCheckPassed, err = s.CheckCapabilitiesOnPath(ctx, s.SecretsMountPath+"/delete/"+s.SecretsPathPrefix+"/*", []string{"create", "update"})
 	if err != nil {
 		return err
 	}
@@ -250,7 +249,7 @@ func (s *VaultStorage) CheckCapabilities(ctx context.Context) error {
 		s.logger.Debug("Capabilities check passed", zap.String("address", s.client.Address()))
 		return nil
 	} else {
-		return fmt.Errorf("Capabilities check failed")
+		return errors.New("capabilities check failed")
 	}
 }
 
@@ -301,16 +300,16 @@ func (s *VaultStorage) ReconnectOnError(ctx context.Context, err error, clientAd
 	// Reconnect on server errors
 	var responseError *vault.ResponseError
 	if errors.As(err, &responseError) {
-		if (responseError.StatusCode >= 500) {
+		if responseError.StatusCode >= 500 {
 			reconnect = true
 		}
 	}
 
-	if (reconnect) {
+	if reconnect {
 		// If there are less than two addresses to choose from, an actual reconnect wouldn't do anything
 		if len(s.Addresses) < 2 {
 			s.logger.Debug("Skipping actual reconnection, because there are not enough addresses configured")
-			return true, nil  // Still perform a connection retry
+			return true, nil // Still perform a connection retry
 		}
 
 		s.connectionLock.Lock()
@@ -334,7 +333,7 @@ func (s *VaultStorage) ReconnectOnError(ctx context.Context, err error, clientAd
 /**
  * Tries to create a lock or blocks until an existing lock is freed (or timed out)
  * and then tries to create the lock again.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Locker
  */
 func (s *VaultStorage) Lock(ctx context.Context, path string) error {
@@ -357,12 +356,12 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 	}
 
 	data := map[string]interface{}{
-		"locked": true,  // This does not mean anything, but is better than nothing
+		"locked": true, // This does not mean anything, but is better than nothing
 	}
 
 	var lockInfo LockInfo
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			s.logger.Debug("Locking failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -370,13 +369,13 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 		// Check if lock is taken
 		for {
 			lockVersionRaw, lockExists := s.lockVersions.Load(path)
-			if (lockExists) {
+			if lockExists {
 				lockVersion, ok := lockVersionRaw.(int)
 				if ok {
 					s.logger.Debug("Lock already taken (locally)", zap.String("path", path), zap.Int("version", lockVersion))
 				} else {
 					s.logger.Debug("Lock already taken (locally)", zap.String("path", path))
-				}				
+				}
 				// Wait a while
 				time.Sleep(time.Duration(s.LockCheckInterval) * time.Second)
 			}
@@ -401,7 +400,7 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 				break
 			}
 
-			if time.Now().Sub(lockInfo.Created) > (time.Duration(s.LockTimeout) * time.Second) {
+			if time.Since(lockInfo.Created) > (time.Duration(s.LockTimeout) * time.Second) {
 				s.logger.Debug("Existing lock timed out", zap.String("path", path), zap.Int("version", lockInfo.Version))
 				// The lock has timed out, so force unlock it
 				lockInfo.IsLocked = false
@@ -427,7 +426,7 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 				if responseError.StatusCode == 400 {
 					s.logger.Debug("Lock was aquired in the meantime, retrying", zap.String("path", path), zap.Int("version", lockInfo.Version))
 					// The lock was already taken by another request, so try again
-					i++  // Don't count this retry as a connection retry
+					i++ // Don't count this retry as a connection retry
 					continue
 				}
 			}
@@ -437,7 +436,7 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 				s.logger.Debug("Locking failed", zap.String("path", path), zap.Error(retryErr))
 				return retryErr
 			}
-			if (!retry) {
+			if !retry {
 				s.logger.Debug("Locking failed", zap.String("path", path), zap.Error(err))
 				return err
 			}
@@ -449,7 +448,7 @@ func (s *VaultStorage) Lock(ctx context.Context, path string) error {
 		}
 	}
 
-	s.lockVersions.Store(path, lockInfo.Version + 1)
+	s.lockVersions.Store(path, lockInfo.Version+1)
 	s.logger.Debug("Locked successfully", zap.String("path", path))
 	return nil
 }
@@ -466,13 +465,13 @@ func (s *VaultStorage) LockEnsureMetadata(ctx context.Context, path string) erro
 	path = strings.Trim(path, "/")
 
 	metadata := vault.KVMetadataPutInput{
-		CASRequired: true,  // The check-and-set ensures that no two concurrent requests can get the lock
-		MaxVersions: 1,  // Don't save the other lock versions
-		DeleteVersionAfter: time.Duration(s.LockTimeout) * time.Second,  // Automated server-side lock timeout
+		CASRequired:        true,                                       // The check-and-set ensures that no two concurrent requests can get the lock
+		MaxVersions:        1,                                          // Don't save the other lock versions
+		DeleteVersionAfter: time.Duration(s.LockTimeout) * time.Second, // Automated server-side lock timeout
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return ErrRetriesExceeded
 		}
 
@@ -485,7 +484,7 @@ func (s *VaultStorage) LockEnsureMetadata(ctx context.Context, path string) erro
 			if retryErr != nil {
 				return retryErr
 			}
-			if (!retry) {
+			if !retry {
 				return err
 			}
 			// Retry connection
@@ -504,8 +503,8 @@ func (s *VaultStorage) LockEnsureMetadata(ctx context.Context, path string) erro
  */
 func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, error) {
 	lockInfo := LockInfo{
-		Created: time.Time{},
-		Version: -1,
+		Created:  time.Time{},
+		Version:  -1,
 		IsLocked: false,
 	}
 
@@ -518,7 +517,7 @@ func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, err
 	var metadata *vault.KVMetadata
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return lockInfo, ErrRetriesExceeded
 		}
 
@@ -534,7 +533,7 @@ func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, err
 				if retryErr != nil {
 					return lockInfo, retryErr
 				}
-				if (!retry) {
+				if !retry {
 					return lockInfo, err
 				}
 				// Retry connection
@@ -546,7 +545,7 @@ func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, err
 		}
 	}
 
-	// Check if the current version of the lock was soft-deleted 
+	// Check if the current version of the lock was soft-deleted
 	isAlive := true
 	versionMetadata, ok := metadata.Versions[strconv.Itoa(metadata.CurrentVersion)]
 	if !ok {
@@ -573,7 +572,7 @@ func (s *VaultStorage) LockStat(ctx context.Context, path string) (LockInfo, err
 /**
  * Frees an existing lock. Throws the error fs.ErrNotExist if there was no lock
  * found, that was aquired on this vault storge module instance.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Locker
  */
 func (s *VaultStorage) Unlock(ctx context.Context, path string) error {
@@ -599,7 +598,7 @@ func (s *VaultStorage) Unlock(ctx context.Context, path string) error {
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			s.logger.Debug("Unlocking failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -618,7 +617,7 @@ func (s *VaultStorage) Unlock(ctx context.Context, path string) error {
 					s.logger.Debug("Unlocking failed", zap.String("path", path), zap.Error(retryErr))
 					return retryErr
 				}
-				if (!retry) {
+				if !retry {
 					s.logger.Debug("Unlocking failed", zap.String("path", path), zap.Error(err))
 					return err
 				}
@@ -637,7 +636,7 @@ func (s *VaultStorage) Unlock(ctx context.Context, path string) error {
 
 /**
  * Creates or updates a value in the key-value store.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) Store(ctx context.Context, path string, value []byte) error {
@@ -660,7 +659,7 @@ func (s *VaultStorage) Store(ctx context.Context, path string, value []byte) err
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			s.logger.Debug("Storing failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return ErrRetriesExceeded
 		}
@@ -675,7 +674,7 @@ func (s *VaultStorage) Store(ctx context.Context, path string, value []byte) err
 				s.logger.Debug("Storing failed", zap.String("path", path), zap.Error(retryErr))
 				return retryErr
 			}
-			if (!retry) {
+			if !retry {
 				s.logger.Debug("Storing failed", zap.String("path", path), zap.Error(err))
 				return err
 			}
@@ -708,7 +707,7 @@ func (s *VaultStorage) StoreEnsureMetadata(ctx context.Context, path string) err
 	}
 
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return ErrRetriesExceeded
 		}
 
@@ -721,7 +720,7 @@ func (s *VaultStorage) StoreEnsureMetadata(ctx context.Context, path string) err
 			if retryErr != nil {
 				return retryErr
 			}
-			if (!retry) {
+			if !retry {
 				return err
 			}
 			// Retry connection
@@ -738,7 +737,7 @@ func (s *VaultStorage) StoreEnsureMetadata(ctx context.Context, path string) err
 /**
  * Retreives a value from the key-value store. Throws the error fs.ErrNotExist
  * if no value exists for the key.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
@@ -753,7 +752,7 @@ func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
 	var secret *vault.KVSecret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return nil, ErrRetriesExceeded
 		}
 
@@ -772,7 +771,7 @@ func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
 					s.logger.Debug("Loading failed", zap.String("path", path), zap.Error(retryErr))
 					return nil, retryErr
 				}
-				if (!retry) {
+				if !retry {
 					s.logger.Debug("Loading failed", zap.String("path", path), zap.Error(err))
 					return nil, err
 				}
@@ -798,7 +797,7 @@ func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
 		return nil, ErrInvalidValue
 	}
 
-	value, err := base64.StdEncoding.DecodeString(data) 
+	value, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		s.logger.Debug("Loading failed", zap.String("path", path), zap.Error(err))
 		return nil, err
@@ -811,7 +810,7 @@ func (s *VaultStorage) Load(ctx context.Context, path string) ([]byte, error) {
 /**
  * Check whether a key exists in the key-value store. On error, false will be
  * returned.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) Exists(ctx context.Context, path string) bool {
@@ -824,7 +823,7 @@ func (s *VaultStorage) Exists(ctx context.Context, path string) bool {
 /**
  * Deletes a value in the key-value store. Throws the error fs.ErrNotExist
  * if no value exists for the key.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) Delete(ctx context.Context, path string) error {
@@ -846,7 +845,7 @@ func (s *VaultStorage) Delete(ctx context.Context, path string) error {
 		} else {
 			s.logger.Debug("Deleting failed", zap.String("path", path), zap.Error(err))
 		}
-		return err  // This includes fs.ErrNotExist
+		return err // This includes fs.ErrNotExist
 	}
 
 	var filePathsToDelete []string
@@ -867,7 +866,7 @@ func (s *VaultStorage) Delete(ctx context.Context, path string) error {
 
 	for _, filePath := range filePathsToDelete {
 		for i := s.MaxRetries; true; i-- {
-			if (i <= 0) {
+			if i <= 0 {
 				s.logger.Debug("Deleting failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 				return ErrRetriesExceeded
 			}
@@ -882,7 +881,7 @@ func (s *VaultStorage) Delete(ctx context.Context, path string) error {
 					s.logger.Debug("Deleting failed", zap.String("path", path), zap.Error(retryErr))
 					return retryErr
 				}
-				if (!retry) {
+				if !retry {
 					s.logger.Debug("Deleting failed", zap.String("path", path), zap.Error(err))
 					return err
 				}
@@ -902,7 +901,7 @@ func (s *VaultStorage) Delete(ctx context.Context, path string) error {
 /**
  * Retreives stat information about a value in the key-value store. Throws the
  * error fs.ErrNotExist, if no value exists for the key.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) Stat(ctx context.Context, path string) (certmagic.KeyInfo, error) {
@@ -911,7 +910,7 @@ func (s *VaultStorage) Stat(ctx context.Context, path string) (certmagic.KeyInfo
 	s.logger.Debug("Stating", zap.String("path", path))
 
 	keyInfo := certmagic.KeyInfo{
-		Key: path,
+		Key:        path,
 		IsTerminal: false,
 	}
 
@@ -923,7 +922,7 @@ func (s *VaultStorage) Stat(ctx context.Context, path string) (certmagic.KeyInfo
 	var metadata *vault.KVMetadata
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			s.logger.Debug("Stating failed", zap.String("path", path), zap.Error(ErrRetriesExceeded))
 			return keyInfo, ErrRetriesExceeded
 		}
@@ -956,7 +955,7 @@ func (s *VaultStorage) Stat(ctx context.Context, path string) (certmagic.KeyInfo
 					s.logger.Debug("Stating failed", zap.String("path", path), zap.Error(retryErr))
 					return keyInfo, retryErr
 				}
-				if (!retry) {
+				if !retry {
 					s.logger.Debug("Stating failed", zap.String("path", path), zap.Error(err))
 					return keyInfo, err
 				}
@@ -1008,20 +1007,20 @@ func (s *VaultStorage) StatCheckDirectory(ctx context.Context, path string) (boo
 	var response *vault.Secret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return false, ErrRetriesExceeded
 		}
 
 		s.connectionLock.RLock()
 		clientAddressTried := s.client.Address()
-		response, err = s.client.Logical().ListWithContext(ctx, s.SecretsMountPath + "/metadata/" + s.PrefixPath(path))
+		response, err = s.client.Logical().ListWithContext(ctx, s.SecretsMountPath+"/metadata/"+s.PrefixPath(path))
 		s.connectionLock.RUnlock()
 		if err != nil {
 			retry, retryErr := s.ReconnectOnError(ctx, err, clientAddressTried)
 			if retryErr != nil {
 				return false, retryErr
 			}
-			if (!retry) {
+			if !retry {
 				return false, err
 			}
 			// Retry connection
@@ -1038,7 +1037,7 @@ func (s *VaultStorage) StatCheckDirectory(ctx context.Context, path string) (boo
 
 /**
  * List all existing keys in a specific path.
- * 
+ *
  * @see https://pkg.go.dev/github.com/caddyserver/certmagic#Storage
  */
 func (s *VaultStorage) List(ctx context.Context, path string, recursive bool) ([]string, error) {
@@ -1055,7 +1054,7 @@ func (s *VaultStorage) List(ctx context.Context, path string, recursive bool) ([
 	pathInfo, err := s.Stat(ctx, path)
 	if err != nil {
 		s.logger.Debug("Listing failed", zap.String("path", path), zap.Error(err))
-		return nil, err  // This includes fs.ErrNotExist
+		return nil, err // This includes fs.ErrNotExist
 	}
 
 	if pathInfo.IsTerminal {
@@ -1099,20 +1098,20 @@ func (s *VaultStorage) ListAggregate(ctx context.Context, path string, recursive
 	var secret *vault.Secret
 	var err error
 	for i := s.MaxRetries; true; i-- {
-		if (i <= 0) {
+		if i <= 0 {
 			return ErrRetriesExceeded
 		}
 
 		s.connectionLock.RLock()
 		clientAddressTried := s.client.Address()
-		secret, err = s.client.Logical().ListWithContext(ctx, s.SecretsMountPath + "/metadata/" + s.PrefixPath(path))
+		secret, err = s.client.Logical().ListWithContext(ctx, s.SecretsMountPath+"/metadata/"+s.PrefixPath(path))
 		s.connectionLock.RUnlock()
 		if err != nil {
 			retry, retryErr := s.ReconnectOnError(ctx, err, clientAddressTried)
 			if retryErr != nil {
 				return retryErr
 			}
-			if (!retry) {
+			if !retry {
 				return err
 			}
 			// Retry connection
@@ -1128,18 +1127,18 @@ func (s *VaultStorage) ListAggregate(ctx context.Context, path string, recursive
 		return fs.ErrNotExist
 	}
 
-	subPathsRaw, ok := secret.Data["keys"].([]interface{});
+	subPathsRaw, ok := secret.Data["keys"].([]interface{})
 	if !ok {
 		return ErrInvalidResponse
 	}
 
 	for _, subPathRaw := range subPathsRaw {
-		subPath, ok := subPathRaw.(string);
+		subPath, ok := subPathRaw.(string)
 		if !ok {
 			return ErrInvalidResponse
 		}
 
-		fullSubPath := strings.Trim(path + "/" + subPath, "/")
+		fullSubPath := strings.Trim(path+"/"+subPath, "/")
 
 		if strings.HasSuffix(subPath, "/") {
 			if recursive {
