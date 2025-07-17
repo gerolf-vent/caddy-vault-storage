@@ -4,7 +4,11 @@ This module supports to configure multiple Vault servers to ensure high availabi
 If you run Caddy inside a Nomad cluster, you can use Nomad to [issue Vault tokens for it](nomad-integration.md).
 
 ## Notice
-A running Vault instance/cluster with an enabled KVv2 mount is required for using this module. At startup a check for required capabilities on the configured secrets path will be performed and error messages will be shown with the missing capabilties, if any. The following capabilities must be granted:
+
+> [!IMPORTANT]  
+> A KV version 2 mount is required for this to work. When using a KV version 1 mount, you *will* encounter the error `secret not found`.
+
+A running Vault instance/cluster with an enabled **KVv2** mount is required for using this module. At startup a check for required capabilities on the configured secrets path will be performed and error messages will be shown with the missing capabilties, if any. The following capabilities must be granted:
 ```hcl
 path "kv/metadata/caddy/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
