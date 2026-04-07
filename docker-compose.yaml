@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   vault:
-    image: hashicorp/vault:latest
+    image: docker.io/hashicorp/vault:latest
     container_name: vault
     ports:
       - "8200:8200"
@@ -27,7 +27,7 @@ services:
           - vault2
 
   vault-setup:
-    image: hashicorp/vault:latest
+    image: docker.io/hashicorp/vault:latest
     container_name: vault-setup
     entrypoint:
       - sh
