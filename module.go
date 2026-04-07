@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -47,7 +48,9 @@ func (s *VaultStorage) Provision(ctx caddy.Context) error {
 			return err
 		}
 
-		err = watcher.Add(s.TokenPath)
+		// Watch the directory of the file, rather than just the
+		// individual file itself, to accommodate atomic file updates.
+		err = watcher.Add(filepath.Dir(s.TokenPath))
 		if err != nil {
 			return err
 		}
@@ -63,9 +66,11 @@ func (s *VaultStorage) Provision(ctx caddy.Context) error {
 						s.logger.Debug("Stopped token file watcher", zap.String("path", s.TokenPath))
 						return
 					}
-					if event.Has(fsnotify.Write) {
-						s.logger.Debug("Token file has been updated", zap.String("path", s.TokenPath))
-						s.LoadTokenFromFile()
+					if event.Name == s.TokenPath {
+						if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+							s.logger.Debug("Token file has been updated", zap.String("path", s.TokenPath))
+							s.LoadTokenFromFile()
+						}
 					}
 				case err, ok := <-watcher.Errors:
 					if !ok {
