@@ -1,4 +1,4 @@
-# HashiCorp [Vault](https://vaultproject.io/) Storage Module for [Caddy](https://caddyserver.com/)
+# [HashiCorp Vault](https://vaultproject.io/) and [OpenBao](https://openbao.org/) Storage Module for [Caddy](https://caddyserver.com/)
 [![Release](https://img.shields.io/github/v/release/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage/releases)
 [![License](https://img.shields.io/github/license/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage/blob/main/LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage)
