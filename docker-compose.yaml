@@ -33,7 +33,11 @@ services:
       - |
         set -e
         echo "Setting up Vault..."
-        vault secrets enable -path=kv -version=2 kv
+        if vault secrets list -format=json | grep -q '"kv/"'; then
+          echo "Vault mount kv/ already exists, skipping setup."
+        else
+          vault secrets enable -path=kv -version=2 kv
+        fi
     depends_on:
       vault:
         condition: service_healthy

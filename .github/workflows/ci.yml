@@ -33,10 +33,7 @@ jobs:
         run: docker compose logs vault vault-setup
 
       - name: Run Go tests
-        run: |
-          docker compose up go-test \
-            --abort-on-container-exit \
-            --exit-code-from go-test
+        run: docker compose run --rm --no-deps go-test
 
       - name: Show logs on failure
         if: failure()
