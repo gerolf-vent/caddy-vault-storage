@@ -30,6 +30,14 @@
       "labels": ["dependencies", "runtime-critical"]
     },
     {
+      "description": "Group Caddy core packages",
+      "matchPackageNames": [
+        "github.com/caddyserver/caddy/v2",
+        "github.com/caddyserver/certmagic"
+      ],
+      "groupName": "caddy core packages"
+    },
+    {
       "description": "Group indirect dependencies",
       "matchDepTypes": ["indirect"],
       "groupName": "indirect dependencies",
