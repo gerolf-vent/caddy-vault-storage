@@ -46,7 +46,7 @@ services:
       VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
 
   go-test:
-    image: cgr.dev/chainguard/go:1.26.5
+    image: docker.io/library/golang:1.26.5
     container_name: go-test
     entrypoint:
     - sh
@@ -111,7 +111,7 @@ services:
       BAO_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
 
   go-test-openbao:
-    image: cgr.dev/chainguard/go:1.26.5
+    image: docker.io/library/golang:1.26.5
     container_name: go-test-openbao
     entrypoint:
     - sh
