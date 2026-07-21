@@ -1,4 +1,9 @@
-# A storage module for [Caddy](https://caddyserver.com/) that uses HashiCorp [Vault](https://vaultproject.io/) as backend
+# HashiCorp [Vault](https://vaultproject.io/) Storage Module for [Caddy](https://caddyserver.com/)
+[![Release](https://img.shields.io/github/v/release/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage/releases)
+[![License](https://img.shields.io/github/license/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage/blob/main/LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage)
+[![Last Commit](https://img.shields.io/github/last-commit/gerolf-vent/caddy-vault-storage)](https://github.com/gerolf-vent/caddy-vault-storage/commits/main)
+
 This module supports to configure multiple Vault servers to ensure high availability. If a request on one configured address failes, another will be tried. This is useful, if you don't have a load-balancer for your Vault cluster or you are using Caddy as a load balancer for it.
 
 If you run Caddy inside a Nomad cluster, you can use Nomad to [issue Vault tokens for it](nomad-integration.md).
