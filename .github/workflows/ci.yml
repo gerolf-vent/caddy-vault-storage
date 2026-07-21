@@ -6,6 +6,8 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
+      - "docker-compose.yaml"
+      - ".github/workflows/ci.yml"
   push:
     branches:
       - main
@@ -13,6 +15,8 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
+      - "docker-compose.yaml"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read
@@ -22,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run Tests
+  test-vault:
+    name: Run Tests (Vault)
     runs-on: ubuntu-latest
 
     steps:
@@ -42,6 +46,35 @@ jobs:
 
       - name: Run Go tests
         run: docker compose run --rm --no-deps go-test
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+  test-openbao:
+    name: Run Tests (OpenBao)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start OpenBao
+        run: docker compose up -d openbao --wait
+
+      - name: Setup OpenBao KV mount
+        run: docker compose run --rm openbao-setup
+
+      - name: Show OpenBao logs on setup failure
+        if: failure()
+        run: docker compose logs openbao openbao-setup
+
+      - name: Run Go tests
+        run: docker compose run --rm --no-deps go-test-openbao
 
       - name: Show logs on failure
         if: failure()

@@ -63,3 +63,69 @@ services:
     environment:
       VAULT_STORAGE_ADDRS: http://vault1:8200,http://vault2:8200
       VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+
+  openbao:
+    image: ghcr.io/openbao/openbao:latest
+    container_name: openbao
+    ports:
+      - "8201:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    command: ["bao", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "bao", "status", "-address", "http://127.0.0.1:8200"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    networks:
+      default:
+        aliases:
+          - openbao
+          - openbao1
+          - openbao2
+
+  openbao-setup:
+    image: ghcr.io/openbao/openbao:latest
+    container_name: openbao-setup
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "Setting up OpenBao..."
+        if bao secrets list -format=json | grep -q '"kv/"'; then
+          echo "OpenBao mount kv/ already exists, skipping setup."
+        else
+          bao secrets enable -path=kv -version=2 kv
+        fi
+    depends_on:
+      openbao:
+        condition: service_healthy
+    environment:
+      BAO_ADDR: http://openbao:8200
+      BAO_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+
+  go-test-openbao:
+    image: cgr.dev/chainguard/go:latest
+    container_name: go-test-openbao
+    entrypoint:
+    - sh
+    - -c
+    - |
+      echo "Running Go tests against OpenBao..."
+      go test
+    working_dir: /src
+    volumes:
+      - .:/src
+    depends_on:
+      openbao-setup:
+        condition: service_completed_successfully
+    environment:
+      VAULT_STORAGE_ADDRS: http://openbao1:8200,http://openbao2:8200
+      VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
+
