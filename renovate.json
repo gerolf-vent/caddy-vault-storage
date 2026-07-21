@@ -72,9 +72,8 @@
       "labels": ["dependencies", "breaking-change"]
     },
     {
-      "description": "Docker Compose updates: automerge on branch (no PR)",
+      "description": "Docker Compose updates: automerge on branch",
       "matchManagers": ["docker-compose"],
-      "pinDigests": true,
       "automerge": true,
       "automergeType": "branch",
       "labels": ["dependencies", "ci"]
