@@ -1,0 +1,83 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 4am on monday"],
+  "timezone": "Etc/UTC",
+  "baseBranches": ["main"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "dependencyDashboard": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 4am on monday"],
+    "groupName": "lock file maintenance",
+    "labels": ["dependencies", "lockfile"]
+  },
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
+  ],
+  "packageRules": [
+    {
+      "description": "Critical runtime dependencies: always require manual review",
+      "matchPackageNames": [
+        "github.com/caddyserver/caddy/v2",
+        "github.com/caddyserver/certmagic",
+        "github.com/hashicorp/vault/api"
+      ],
+      "automerge": false,
+      "labels": ["dependencies", "runtime-critical"]
+    },
+    {
+      "description": "Group indirect dependencies",
+      "matchDepTypes": ["indirect"],
+      "groupName": "indirect dependencies",
+      "automerge": true,
+      "matchUpdateTypes": ["minor", "patch", "digest"]
+    },
+    {
+      "description": "Group golang.org/x/* packages",
+      "matchPackageNames": ["golang.org/x/**"],
+      "groupName": "golang.org/x packages"
+    },
+    {
+      "description": "Direct dependencies: Minor/Patch automerge after tests",
+      "matchDepTypes": ["require"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "excludePackageNames": [
+        "github.com/caddyserver/caddy/v2",
+        "github.com/caddyserver/certmagic",
+        "github.com/hashicorp/vault/api"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Direct dependencies: Major manual review",
+      "matchPackageNames": [
+        "github.com/caddyserver/caddy/v2",
+        "github.com/caddyserver/certmagic",
+        "github.com/hashicorp/vault/api"
+      ],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "breaking-change"]
+    },
+    {
+      "description": "Docker Compose updates: automerge on branch (no PR)",
+      "matchManagers": ["docker-compose"],
+      "pinDigests": true,
+      "automerge": true,
+      "automergeType": "branch",
+      "labels": ["dependencies", "ci"]
+    },
+    {
+      "description": "Devcontainer updates: automerge on branch",
+      "matchManagers": ["devcontainer"],
+      "automerge": true,
+      "automergeType": "branch",
+      "labels": ["dependencies", "devcontainer"]
+    }
+  ],
+  "constraintsFiltering": "strict"
+}
