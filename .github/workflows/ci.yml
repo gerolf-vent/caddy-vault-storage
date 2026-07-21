@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Vault
+        run: docker compose up -d vault vault-setup --wait
+
+      - name: Show Vault logs on setup failure
+        if: failure()
+        run: docker compose logs vault vault-setup
+
+      - name: Run Go tests
+        run: |
+          docker compose up go-test \
+            --abort-on-container-exit \
+            --exit-code-from go-test
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
