@@ -23,7 +23,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start Vault
-        run: docker compose up -d vault vault-setup --wait
+        run: docker compose up -d vault --wait
+
+      - name: Setup Vault KV mount
+        run: docker compose run --rm vault-setup
 
       - name: Show Vault logs on setup failure
         if: failure()

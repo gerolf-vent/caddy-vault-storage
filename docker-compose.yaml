@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   vault:
     image: docker.io/hashicorp/vault:latest
