@@ -3,7 +3,9 @@
   "extends": ["config:recommended"],
   "schedule": ["before 4am on monday"],
   "timezone": "Etc/UTC",
-  "baseBranches": ["main"],
+  "baseBranchPatterns": [
+    "main"
+  ],
   "labels": ["dependencies"],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
@@ -53,12 +55,12 @@
       "description": "Direct dependencies: Minor/Patch automerge after tests",
       "matchDepTypes": ["require"],
       "matchUpdateTypes": ["minor", "patch"],
-      "excludePackageNames": [
-        "github.com/caddyserver/caddy/v2",
-        "github.com/caddyserver/certmagic",
-        "github.com/hashicorp/vault/api"
-      ],
-      "automerge": true
+      "automerge": true,
+      "matchPackageNames": [
+        "!github.com/caddyserver/caddy/v2",
+        "!github.com/caddyserver/certmagic",
+        "!github.com/hashicorp/vault/api"
+      ]
     },
     {
       "description": "Direct dependencies: Major manual review",
