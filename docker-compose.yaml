@@ -65,7 +65,7 @@ services:
       VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
 
   openbao:
-    image: ghcr.io/openbao/openbao:2.6.1
+    image: ghcr.io/openbao/openbao:2.6.2
     container_name: openbao
     ports:
       - "8201:8200"
@@ -90,7 +90,7 @@ services:
           - openbao2
 
   openbao-setup:
-    image: ghcr.io/openbao/openbao:2.6.1
+    image: ghcr.io/openbao/openbao:2.6.2
     container_name: openbao-setup
     entrypoint:
       - sh
