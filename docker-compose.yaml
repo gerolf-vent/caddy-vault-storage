@@ -98,10 +98,15 @@ services:
       - |
         set -e
         echo "Setting up OpenBao..."
-        if bao secrets list -format=json | grep -q '"kv/"'; then
+        if bao namespace list -format=json | grep -q '"caddy-test/"'; then
+          echo "OpenBao namespace caddy-test/ already exists, skipping setup."
+        else
+          bao namespace create caddy-test
+        fi
+        if BAO_NAMESPACE=caddy-test bao secrets list -format=json | grep -q '"kv/"'; then
           echo "OpenBao mount kv/ already exists, skipping setup."
         else
-          bao secrets enable -path=kv -version=2 kv
+          BAO_NAMESPACE=caddy-test bao secrets enable -path=kv -version=2 kv
         fi
     depends_on:
       openbao:
@@ -128,4 +133,4 @@ services:
     environment:
       VAULT_STORAGE_ADDRS: http://openbao1:8200,http://openbao2:8200
       VAULT_TOKEN: uJaVBZa4pmpCUyaO1EnnXdVFZPfGMSO9
-
+      VAULT_NAMESPACE: caddy-test
