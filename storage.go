@@ -191,7 +191,14 @@ func (s *VaultStorage) Connect(ctx context.Context) error {
 			}
 		}
 
-		healthResponse, err := s.client.Sys().HealthWithContext(ctx)
+		// The vault healthcheck endpoint only exists in the root namespace, so we
+		// need a separate vault client bound to to that namespace
+		healthConfig := vault.DefaultConfig()
+		healthConfig.Address = address
+		healthClient, err := vault.NewClient(healthConfig)
+		healthClient.SetNamespace("")
+
+		healthResponse, err := healthClient.Sys().HealthWithContext(ctx)
 		if err != nil {
 			s.logger.Warn("Failed to get health status", zap.String("address", address), zap.Error(err))
 			continue
